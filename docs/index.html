@@ -200,6 +200,41 @@ header{
 .fi-status.error{background:var(--red)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
+/* ── FOLDER ITEMS ── */
+.folder-item{
+  display:flex;align-items:center;gap:6px;padding:5px 8px;
+  border-radius:var(--radius);cursor:pointer;transition:all .15s;
+  margin-bottom:1px;position:relative;border:1px solid transparent;
+  user-select:none;
+}
+.folder-item:hover{background:var(--surface2)}
+.folder-item.drag-over-folder{border-color:var(--accent);background:var(--accent-dim)}
+.folder-toggle{
+  font-size:9px;color:var(--muted);flex-shrink:0;
+  width:12px;text-align:center;transition:transform .15s;
+  line-height:1;
+}
+.folder-toggle.open{transform:rotate(90deg)}
+.folder-icon{font-size:13px;flex-shrink:0;width:16px;text-align:center}
+.folder-name{flex:1;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono);color:var(--text2)}
+.folder-count{font-size:9px;color:var(--muted);flex-shrink:0}
+.folder-del{
+  opacity:0;font-size:11px;color:var(--muted);cursor:pointer;padding:2px;
+  border-radius:3px;flex-shrink:0;background:none;border:none;transition:.15s;
+}
+.folder-item:hover .folder-del{opacity:1}
+.folder-del:hover{color:var(--red);background:rgba(240,82,82,.15)}
+
+.folder-children{overflow:hidden;transition:max-height .2s cubic-bezier(.4,0,.2,1)}
+.folder-children.collapsed{max-height:0!important}
+
+.file-item.indented{padding-left:calc(8px + var(--depth,0)*16px)}
+.folder-item.indented{padding-left:calc(8px + var(--depth,0)*16px)}
+
+/* Root-level files (depth 0) keep normal padding */
+.file-item[data-depth="0"]{padding-left:8px}
+.folder-item[data-depth="0"]{padding-left:8px}
+
 /* ── SIDEBAR FOOTER ── */
 .sidebar-footer{border-top:1px solid var(--border);padding:10px 12px;flex-shrink:0}
 .compress-all-btn{
@@ -791,6 +826,7 @@ textarea.out-code{
     <button class="btn btn-green" onclick="exportBundle()">Export bundle</button>
     <button class="btn btn-accent" onclick="triggerFileInput()">+ Add files</button>
     <input type="file" id="globalFileInput" multiple accept=".js,.ts,.jsx,.tsx,.html,.css,.py,.json,.md,.txt,.zip" style="display:none" onchange="handleFileInputChange(this)">
+    <input type="file" id="globalFolderInput" multiple webkitdirectory style="display:none" onchange="handleFolderInputChange(this)">
     <div class="hdr-sep"></div>
     <a class="author-chip" href="https://github.com/rhshourav/TC" target="_blank" rel="noopener" title="View on GitHub by @rhshourav">
       <div class="ac-avatar">
@@ -828,9 +864,9 @@ textarea.out-code{
     </div>
 
     <div class="drop-zone" id="sidebarDrop" onclick="triggerFileInput()" ondragover="onDragOver(event,'sidebarDrop')" ondragleave="onDragLeave('sidebarDrop')" ondrop="onDrop(event,'sidebarDrop')">
-      <div class="dz-icon">📁</div>
-      <strong>Drop files or ZIP here</strong>
-      <p>.js .ts .html .css .py<br>.json .md .zip</p>
+      <div class="dz-icon">📂</div>
+      <strong>Drop files, folders or ZIP</strong>
+      <p>.js .ts .html .css .py<br>.json .md .zip · folders OK</p>
     </div>
 
     <div class="file-list" id="fileList"></div>
@@ -1060,6 +1096,8 @@ textarea.out-code{
 //  STATE
 // ─────────────────────────────────────────
 const files = new Map();
+// folders: Map<folderId, { name, parentId|null, collapsed:bool }>
+const folders = new Map();
 let activeFileId = null;
 let currentStrategy = 'none';
 let compressionHistory = [];  // { ts, fileName, tokenIn, tokenOut, compressed, ctxMap }
@@ -1196,41 +1234,211 @@ function updateTokenPill(tok){
 // ─────────────────────────────────────────
 //  FILE MANAGEMENT
 // ─────────────────────────────────────────
-function addFile(name,content){
-  if(!isCompressible(name)){ showToast('Skipped: '+name+' (unsupported type)','err'); return; }
+// ─────────────────────────────────────────
+//  FOLDER MANAGEMENT
+// ─────────────────────────────────────────
+function addFolder(name, parentId=null){
+  // Deduplicate: return existing if same name + parent
+  for(const [id,f] of folders){
+    if(f.name===name && f.parentId===parentId) return id;
+  }
   const id=uid();
-  files.set(id,{name,content,lang:getLang(name),compressed:'',ctxMap:[],pseudo:'',tokenIn:estTok(content),tokenOut:0});
+  folders.set(id,{name,parentId,collapsed:false});
+  return id;
+}
+
+function deleteFolder(folderId,e){
+  if(e) e.stopPropagation();
+  // Delete all children files
+  for(const [id,f] of files){
+    if(f.folderId===folderId||isDescendantFolder(f.folderId,folderId)){
+      files.delete(id);
+      if(activeFileId===id){ activeFileId=null; showEditorEmpty(); showOutEmpty(); }
+    }
+  }
+  // Delete child folders recursively
+  for(const [id] of folders){
+    if(isDescendantFolder(id,folderId)) folders.delete(id);
+  }
+  folders.delete(folderId);
+  renderFileList(); updateFileCount(); updateGlobalStats();
+  if(activeFileId===null&&files.size>0) selectFile(files.keys().next().value);
+}
+
+function isDescendantFolder(folderId, ancestorId){
+  if(!folderId) return false;
+  let cur=folderId;
+  while(cur){
+    const f=folders.get(cur);
+    if(!f) return false;
+    if(f.parentId===ancestorId) return true;
+    cur=f.parentId;
+  }
+  return false;
+}
+
+function toggleFolder(folderId){
+  const f=folders.get(folderId); if(!f) return;
+  f.collapsed=!f.collapsed;
+  renderFileList();
+}
+
+function getFolderPath(folderId){
+  const parts=[];
+  let cur=folderId;
+  while(cur){
+    const f=folders.get(cur);
+    if(!f) break;
+    parts.unshift(f.name);
+    cur=f.parentId;
+  }
+  return parts.join('/');
+}
+
+function addFile(name,content,folderId=null){
+  if(!isCompressible(name)){ showToast('Skipped: '+name+' (unsupported type)','err'); return; }
+  // Deduplicate within same folder
+  for(const [id,f] of files){
+    if(f.name===name && f.folderId===folderId){
+      f.content=content; f.tokenIn=estTok(content);
+      f.compressed=''; f.ctxMap=[]; f.pseudo='';
+      renderFileList();
+      return id;
+    }
+  }
+  const id=uid();
+  files.set(id,{name,content,lang:getLang(name),folderId,compressed:'',ctxMap:[],pseudo:'',tokenIn:estTok(content),tokenOut:0});
   renderFileList();
   if(!activeFileId) selectFile(id);
   updateFileCount();
   return id;
 }
 
-async function handleFiles(fileList){
+// ─────────────────────────────────────────
+//  HANDLE DROPPED / SELECTED FILES
+// ─────────────────────────────────────────
+async function handleFiles(fileList, parentFolderId=null){
   const arr=Array.from(fileList);
   for(const f of arr){
-    if(f.name.endsWith('.zip')) await handleZip(f);
-    else{ const text=await f.text(); addFile(f.name,text); }
+    if(f.name.endsWith('.zip')) await handleZip(f,parentFolderId);
+    else{ const text=await f.text(); addFile(f.name,text,parentFolderId); }
   }
 }
 
-async function handleZip(file){
+// Handle DataTransferItemList (supports folders via webkitGetAsEntry)
+async function handleDataTransferItems(items){
+  const entries=[];
+  for(const item of items){
+    if(item.kind!=='file') continue;
+    const entry=item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+    if(entry) entries.push(entry);
+    else{
+      // Fallback: treat as plain file
+      const f=item.getAsFile();
+      if(f) await handleFiles([f]);
+    }
+  }
+  for(const entry of entries){
+    await processEntry(entry,null);
+  }
+  renderFileList(); updateFileCount(); updateGlobalStats();
+}
+
+async function processEntry(entry, parentFolderId){
+  if(entry.isDirectory){
+    const folderId=addFolder(entry.name,parentFolderId);
+    const reader=entry.createReader();
+    // Chrome's createReader returns up to 100 entries per call; loop until done
+    const allEntries=[];
+    const readBatch=()=>new Promise((res,rej)=>reader.readEntries(res,rej));
+    let batch;
+    do{
+      batch=await readBatch();
+      allEntries.push(...batch);
+    }while(batch.length>0);
+    for(const child of allEntries) await processEntry(child,folderId);
+  } else if(entry.isFile){
+    const file=await new Promise((res,rej)=>entry.file(res,rej));
+    if(file.name.endsWith('.zip')) await handleZip(file,parentFolderId);
+    else if(isCompressible(file.name)){
+      const text=await file.text();
+      addFile(file.name,text,parentFolderId);
+    }
+  }
+}
+
+async function handleZip(file,parentFolderId=null){
   try{
     const zip=await JSZip.loadAsync(file);
+    // Build folder structure from zip paths
+    const folderCache={};
+    function ensureFolder(parts,parent){
+      if(!parts.length) return parent;
+      const key=parts.join('/');
+      if(folderCache[key]) return folderCache[key];
+      const id=addFolder(parts[parts.length-1],parent);
+      folderCache[key]=id;
+      return id;
+    }
     const entries=[];
-    zip.forEach((path,entry)=>{ if(!entry.dir&&isCompressible(path.split('/').pop())) entries.push({path,entry}); });
+    zip.forEach((path,entry)=>{
+      if(!entry.dir&&isCompressible(path.split('/').pop())) entries.push({path,entry});
+    });
     if(!entries.length){ showToast('ZIP has no supported code files','err'); return; }
     let added=0;
     for(const {path,entry} of entries){
+      const parts=path.split('/').filter(Boolean);
+      const fileName=parts.pop();
+      let fid=parentFolderId;
+      if(parts.length){
+        // Build nested folders
+        for(let i=0;i<parts.length;i++){
+          fid=ensureFolder(parts.slice(0,i+1),i===0?parentFolderId:folderCache[parts.slice(0,i).join('/')]);
+        }
+      }
       const text=await entry.async('text');
-      addFile(path.split('/').pop(),text); added++;
+      addFile(fileName,text,fid); added++;
     }
     showToast(`Extracted ${added} files from ${file.name}`);
   }catch(e){ showToast('Failed to read ZIP: '+e.message,'err'); }
 }
 
+// Handle webkitdirectory input (flat list with webkitRelativePath)
+async function handleFolderInputChange(input){
+  const fileArr=Array.from(input.files);
+  // Build folder tree from webkitRelativePath
+  const folderCache={};
+  function ensureFolder(parts,startParent){
+    let parent=startParent||null;
+    let pathSoFar='';
+    for(let i=0;i<parts.length;i++){
+      pathSoFar=pathSoFar?pathSoFar+'/'+parts[i]:parts[i];
+      if(folderCache[pathSoFar]){
+        parent=folderCache[pathSoFar];
+      } else {
+        const id=addFolder(parts[i],parent);
+        folderCache[pathSoFar]=id;
+        parent=id;
+      }
+    }
+    return parent;
+  }
+  for(const f of fileArr){
+    const rel=f.webkitRelativePath||f.name;
+    const parts=rel.split('/').filter(Boolean);
+    const fileName=parts.pop();
+    const folderId=parts.length?ensureFolder(parts,null):null;
+    if(!isCompressible(fileName)){ continue; }
+    const text=await f.text();
+    addFile(fileName,text,folderId);
+  }
+  input.value='';
+  renderFileList(); updateFileCount();
+}
+
 function handleFileInputChange(input){ handleFiles(input.files); input.value=''; }
 function triggerFileInput(){ document.getElementById('globalFileInput').click(); }
+function triggerFolderInput(){ document.getElementById('globalFolderInput').click(); }
 
 // ─────────────────────────────────────────
 //  FILE SEARCH / FILTER
@@ -1325,9 +1533,24 @@ function showOutEmpty(){
 // ─────────────────────────────────────────
 function onDragOver(e,id){ e.preventDefault(); document.getElementById(id)?.classList.add('drag-over'); }
 function onDragLeave(id){ document.getElementById(id)?.classList.remove('drag-over'); }
-function onDrop(e,id){ e.preventDefault(); document.getElementById(id)?.classList.remove('drag-over'); handleFiles(e.dataTransfer.files); }
+function onDrop(e,id){
+  e.preventDefault();
+  document.getElementById(id)?.classList.remove('drag-over');
+  const dt=e.dataTransfer;
+  if(dt.items&&dt.items.length>0){
+    // Use DataTransferItems for folder support
+    handleDataTransferItems(dt.items);
+  } else {
+    handleFiles(dt.files);
+  }
+}
 document.body.addEventListener('dragover',e=>e.preventDefault());
-document.body.addEventListener('drop',e=>{ e.preventDefault(); handleFiles(e.dataTransfer.files); });
+document.body.addEventListener('drop',e=>{
+  e.preventDefault();
+  const dt=e.dataTransfer;
+  if(dt.items&&dt.items.length>0) handleDataTransferItems(dt.items);
+  else handleFiles(dt.files);
+});
 
 // ─────────────────────────────────────────
 //  EDITOR LIVE UPDATE
