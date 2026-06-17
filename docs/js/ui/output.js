@@ -245,6 +245,7 @@ export function switchTab(name) {
   const tabMap = {
     diff: 'diffView',
     prompt: 'promptView',
+    context: 'contextView',
     bundle: 'bundleView',
     history: 'historyView',
     allstats: 'allstatsView'
@@ -257,6 +258,9 @@ export function switchTab(name) {
   }
   if (name === 'prompt' && f) {
     buildPromptView(f);
+  }
+  if (name === 'context' && f) {
+    renderCtxMap(f.ctxMap);
   }
   if (name === 'bundle') buildBundleView();
   if (name === 'history') buildHistoryView();
