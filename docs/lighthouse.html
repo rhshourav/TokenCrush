@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Lighthouse Builder — TokenCrush</title>
+<meta name="theme-color" content="#1a3a5c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0b0b0e}
+
+.game{position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;overflow:hidden}
+
+/* ===== SKY ===== */
+.sky{
+  position:absolute;top:0;left:0;right:0;height:60%;
+  background:linear-gradient(180deg,#87CEEB 0%,#5BA3D9 40%,#B8E4F0 100%);
+  animation:skyCycle 400s linear infinite;
+  z-index:0;
+}
+.sky::before{
+  content:'☀️';position:absolute;font-size:clamp(30px,8vw,50px);
+  top:15%;left:50%;transform:translateX(-50%);
+  animation:sunMove 400s linear infinite;z-index:1;
+  filter:drop-shadow(0 0 20px rgba(255,200,50,0.6));
+}
+.sky::after{
+  content:'🌙';position:absolute;font-size:clamp(24px,6vw,40px);
+  top:60%;left:50%;transform:translateX(-50%);
+  animation:moonMove 400s linear infinite;z-index:1;
+  opacity:0;
+}
+@keyframes skyCycle{
+  0%,4%{background:linear-gradient(180deg,#FFB347 0%,#FF8E72 30%,#87CEEB 100%)}
+  12%,32%{background:linear-gradient(180deg,#4FC3F7 0%,#29B6F6 30%,#81D4FA 100%)}
+  40%,52%{background:linear-gradient(180deg,#FF8A65 0%,#E57373 25%,#7E57C2 60%,#5C6BC0 100%)}
+  60%,80%{background:linear-gradient(180deg,#1A1A2E 0%,#16213E 40%,#0F3460 100%)}
+  88%,96%{background:linear-gradient(180deg,#FFB347 0%,#FF8E72 30%,#87CEEB 100%)}
+  100%{background:linear-gradient(180deg,#FFB347 0%,#FF8E72 30%,#87CEEB 100%)}
+}
+@keyframes sunMove{
+  0%,4%{opacity:0;top:40%}
+  12%,32%{opacity:1;top:8%}
+  40%,52%{opacity:0.8;top:20%}
+  60%,88%{opacity:0;top:50%}
+  96%,100%{opacity:0.3;top:35%}
+}
+@keyframes moonMove{
+  0%,55%{opacity:0;top:60%}
+  65%,80%{opacity:1;top:10%}
+  88%,100%{opacity:0;top:50%}
+}
+
+/* Stars (shown at night) */
+.stars{position:absolute;top:0;left:0;right:0;bottom:0;opacity:0;animation:starsShow 400s linear infinite}
+.stars::before,.stars::after{content:'✦ ✧ ✦';position:absolute;color:#fff;font-size:10px;letter-spacing:12px;opacity:0.6}
+.stars::before{top:8%;left:10%}
+.stars::after{top:20%;right:8%;letter-spacing:18px;font-size:8px}
+@keyframes starsShow{
+  0%,55%{opacity:0}
+  65%,80%{opacity:1}
+  88%,100%{opacity:0}
+}
+
+/* ===== HEADER ===== */
+.game-header{position:relative;z-index:10;width:100%;padding:10px 16px 6px;text-align:center}
+.game-title{font-size:clamp(14px,4vw,18px);font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.4);margin-bottom:6px}
+.timer{width:100%;max-width:280px;height:6px;background:rgba(255,255,255,0.15);border-radius:3px;overflow:hidden;margin:0 auto;border:1px solid rgba(255,255,255,0.1)}
+.timer-fill{width:100%;height:100%;background:linear-gradient(90deg,#3ecf8e 0%,#f5a623 60%,#ef4444 100%);border-radius:3px;animation:countdown 400s linear forwards}
+@keyframes countdown{from{width:100%}to{width:0%}}
+
+/* ===== INSTRUCTIONS ===== */
+.instructions{position:relative;z-index:10;text-align:center;padding:4px 16px 2px;color:rgba(255,255,255,0.6);font-size:clamp(10px,2.8vw,12px);line-height:1.4}
+
+/* ===== BACK LINK ===== */
+.back-link{
+  position:fixed;top:8px;left:8px;z-index:200;
+  width:32px;height:32px;border-radius:8px;
+  background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,0.1);
+  color:#fff;font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+  text-decoration:none;transition:all .15s;
+}
+.back-link:hover{background:rgba(0,0,0,0.6);border-color:rgba(255,255,255,0.2)}
+
+/* ===== ISLAND SCENE ===== */
+.island-scene{position:relative;z-index:5;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding:0 16px}
+
+/* ===== ISLAND ===== */
+.island{
+  position:relative;
+  width:min(82vw,340px);aspect-ratio:1;
+  background:linear-gradient(145deg,#5a8c47 0%,#4a7c3f 30%,#3d6b35 60%,#2d5a28 100%);
+  border-radius:48% 52% 46% 54%/54% 50% 50% 46%;
+  box-shadow:0 8px 32px rgba(0,0,0,0.35),inset 0 -6px 16px rgba(0,0,0,0.15),inset 0 2px 8px rgba(255,255,255,0.08);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:-24px;
+}
+/* Grass texture */
+.island::before{
+  content:'';position:absolute;inset:0;border-radius:inherit;
+  background:radial-gradient(ellipse at 30% 40%,rgba(100,180,80,0.2) 0%,transparent 50%),
+             radial-gradient(ellipse at 70% 60%,rgba(80,160,60,0.15) 0%,transparent 40%);
+}
+
+/* ===== GRID ===== */
+.grid{display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);gap:clamp(2px,0.8vw,4px);width:82%;height:82%;padding:2px;position:relative;z-index:2}
+
+/* ===== CELLS ===== */
+.cell{
+  position:relative;border-radius:clamp(4px,1.2vw,8px);
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.08);
+  transition:all .2s;overflow:visible;
+}
+.cell input[type="checkbox"]{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+.cell label{
+  display:flex;align-items:center;justify-content:center;
+  width:100%;height:100%;cursor:pointer;position:relative;
+  -webkit-tap-highlight-color:transparent;
+}
+.cell label:active{transform:scale(0.9)}
+.cell:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.15)}
+
+/* Tree & House */
+.tree,.house{position:absolute;font-size:clamp(16px,5vw,26px);transition:all .3s ease;line-height:1;pointer-events:none}
+.tree{display:none;opacity:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.2))}
+.house{display:none;opacity:0;transform:scale(0.3) rotate(-10deg);filter:drop-shadow(0 1px 3px rgba(0,0,0,0.25))}
+
+/* Cells with trees */
+.cell[data-tree] .tree{display:block}
+
+/* Checked state: tree out, house in */
+.cell input:checked + label .tree{display:none!important;opacity:0;transform:scale(0) rotate(20deg)}
+.cell input:checked + label .house{display:block!important;opacity:1;transform:scale(1) rotate(0);animation:popIn .35s cubic-bezier(.34,1.56,.64,1)}
+.cell input:checked + label{background:rgba(255,255,255,0.04)}
+@keyframes popIn{
+  0%{transform:scale(0.2) rotate(-15deg);opacity:0}
+  60%{transform:scale(1.15) rotate(3deg)}
+  100%{transform:scale(1) rotate(0);opacity:1}
+}
+
+/* Column 2 (lighthouse parts) — special styling */
+.cell:nth-child(2) input:checked + label .house,
+.cell:nth-child(6) input:checked + label .house,
+.cell:nth-child(10) input:checked + label .house,
+.cell:nth-child(14) input:checked + label .house{
+  filter:drop-shadow(0 0 6px rgba(188,47,47,0.6)) drop-shadow(0 0 12px rgba(188,47,47,0.3));
+}
+.cell:nth-child(2) input:checked + label,
+.cell:nth-child(6) input:checked + label,
+.cell:nth-child(10) input:checked + label,
+.cell:nth-child(14) input:checked + label{
+  background:rgba(188,47,47,0.08);
+  border-color:rgba(188,47,47,0.2);
+}
+
+/* Individual lighthouse part colors */
+.cell:nth-child(2) input:checked + label .house{content:'🏠'}
+.cell:nth-child(6) input:checked + label .house{content:'🏠'}
+.cell:nth-child(10) input:checked + label .house{content:'🏠'}
+.cell:nth-child(14) input:checked + label .house{content:'🏠'}
+
+/* ===== WATER ===== */
+.water-wrap{position:relative;width:110%;height:clamp(50px,15vh,90px);margin-top:-18px;z-index:4}
+.water{
+  width:100%;height:100%;
+  background:linear-gradient(180deg,#2196F3 0%,#1976D2 40%,#1565C0 70%,#0D47A1 100%);
+  border-radius:50% 50% 0 0/80% 80% 0 0;
+  position:relative;overflow:hidden;
+}
+.water::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:40%;
+  background:linear-gradient(180deg,rgba(255,255,255,0.18) 0%,rgba(255,255,255,0.05) 100%);
+  border-radius:50% 50% 0 0/100% 100% 0 0;
+}
+.water::after{
+  content:'';position:absolute;top:6px;left:0;right:0;bottom:0;
+  background:repeating-linear-gradient(90deg,transparent 0px,rgba(255,255,255,0.06) 20px,transparent 40px);
+  animation:waterShimmer 4s ease-in-out infinite;
+}
+@keyframes waterShimmer{
+  0%,100%{transform:translateX(0)}
+  50%{transform:translateX(-20px)}
+}
+
+/* Wave layers */
+.wave{position:absolute;width:200%;height:100%;top:0;left:-50%;opacity:0.12}
+.wave-1{
+  background:radial-gradient(ellipse at 25% 50%,rgba(255,255,255,0.4) 0%,transparent 60%);
+  animation:waveMove 6s ease-in-out infinite;
+}
+.wave-2{
+  background:radial-gradient(ellipse at 75% 50%,rgba(255,255,255,0.3) 0%,transparent 55%);
+  animation:waveMove 8s ease-in-out infinite reverse;
+}
+@keyframes waveMove{
+  0%,100%{transform:translateX(0) scaleY(1)}
+  50%{transform:translateX(5%) scaleY(0.9)}
+}
+
+/* ===== LIGHTHOUSE OVERLAY ===== */
+.lighthouse{
+  display:none;position:absolute;
+  left:50%;bottom:42%;
+  transform:translateX(-50%);
+  z-index:15;
+  animation:lhAppear .8s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes lhAppear{
+  0%{opacity:0;transform:translateX(-50%) scale(0.3) translateY(20px)}
+  100%{opacity:1;transform:translateX(-50%) scale(1) translateY(0)}
+}
+.lh-base{
+  width:28px;height:14px;
+  background:#555;border-radius:2px 2px 4px 4px;
+  margin:0 auto;position:relative;
+}
+.lh-tower{
+  width:18px;height:64px;margin:0 auto;
+  background:repeating-linear-gradient(0deg,#bc2f2f 0px,#bc2f2f 10px,#f5f5f5 10px,#f5f5f5 20px);
+  border-radius:2px 2px 0 0;position:relative;
+}
+.lh-tower::before{
+  content:'';position:absolute;top:-6px;left:-3px;right:-3px;height:8px;
+  background:#444;border-radius:2px;
+}
+.lh-cabin{
+  width:22px;height:10px;margin:0 auto;
+  background:#bc2f2f;border-radius:3px 3px 0 0;position:relative;
+}
+.lh-cabin::before{
+  content:'';position:absolute;top:-5px;left:50%;transform:translateX(-50%);
+  width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:5px solid #333;
+}
+/* Light */
+.lh-light{
+  width:8px;height:8px;margin:0 auto;
+  background:radial-gradient(circle,#FFD700 30%,rgba(255,215,0,0.6) 60%,transparent 100%);
+  border-radius:50%;position:relative;top:-1px;
+  box-shadow:0 0 8px 4px rgba(255,215,0,0.5),0 0 24px 8px rgba(255,215,0,0.25);
+  animation:lightPulse 2s ease-in-out infinite;
+}
+@keyframes lightPulse{
+  0%,100%{box-shadow:0 0 8px 4px rgba(255,215,0,0.5),0 0 24px 8px rgba(255,215,0,0.25)}
+  50%{box-shadow:0 0 16px 8px rgba(255,215,0,0.7),0 0 40px 16px rgba(255,215,0,0.4)}
+}
+/* Beam */
+.lh-beam{
+  position:absolute;top:-2px;left:50%;transform-origin:0 0;
+  width:120px;height:3px;
+  background:linear-gradient(90deg,rgba(255,215,0,0.5),rgba(255,215,0,0.1),transparent);
+  animation:beamSweep 4s ease-in-out infinite;
+  border-radius:0 2px 2px 0;
+}
+@keyframes beamSweep{
+  0%,100%{transform:rotate(-30deg)}
+  50%{transform:rotate(30deg)}
+}
+
+/* ===== OVERLAYS ===== */
+.win-msg,.lose-msg{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;z-index:100;
+  transition:opacity .5s;
+}
+.win-msg{background:rgba(0,0,0,0.65);backdrop-filter:blur(6px)}
+.lose-msg{background:rgba(0,0,0,0.75);backdrop-filter:blur(6px)}
+
+.overlay-card{
+  text-align:center;color:#fff;padding:28px 32px;
+  background:rgba(20,20,30,0.92);border-radius:16px;
+  border:1px solid rgba(255,255,255,0.1);
+  max-width:300px;width:85%;
+  box-shadow:0 16px 48px rgba(0,0,0,0.4);
+  animation:cardIn .4s ease;
+}
+@keyframes cardIn{0%{transform:scale(0.8) translateY(20px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
+
+.overlay-card h2{font-size:clamp(20px,5vw,26px);margin-bottom:8px}
+.overlay-card p{font-size:clamp(12px,3vw,14px);color:#a0a0aa;line-height:1.5;margin-bottom:16px}
+.overlay-card .emoji-big{font-size:48px;margin-bottom:12px;display:block}
+
+.restart-btn{
+  display:inline-block;padding:10px 24px;
+  background:var(--accent,#7c6dfa);color:#fff;
+  border:none;border-radius:10px;font-size:14px;font-weight:600;
+  cursor:pointer;text-decoration:none;transition:all .15s;
+}
+.restart-btn:hover{opacity:.9;transform:scale(1.03)}
+.restart-btn:active{transform:scale(0.97)}
+
+/* ===== WIN CONDITION ===== */
+/* Column 2 cells: #c2 (row1), #c6 (row2), #c10 (row3), #c14 (row4) */
+.game:has(#c2:checked):has(#c6:checked):has(#c10:checked):has(#c14:checked) .win-msg{
+  opacity:1;pointer-events:auto;
+}
+.game:has(#c2:checked):has(#c6:checked):has(#c10:checked):has(#c14:checked) .lighthouse{
+  display:block;
+}
+.game:has(#c2:checked):has(#c6:checked):has(#c10:checked):has(#c14:checked) .cell label{
+  pointer-events:none;cursor:default;
+}
+.game:has(#c2:checked):has(#c6:checked):has(#c10:checked):has(#c14:checked) .lose-msg{
+  animation:none!important;opacity:0!important;
+}
+
+/* ===== LOSE CONDITION ===== */
+.lose-msg{animation:showLose .5s 400s forwards}
+@keyframes showLose{to{opacity:1;pointer-events:auto}}
+/* Suppress lose if win already triggered */
+.game:has(#c2:checked):has(#c6:checked):has(#c10:checked):has(#c14:checked) .lose-msg{
+  animation:none!important;opacity:0!important;pointer-events:none!important;
+}
+
+/* ===== CELL COLOR VARIANTS (random-ish) ===== */
+.cell:nth-child(1) label{--hue:120}
+.cell:nth-child(2) label{--hue:100}
+.cell:nth-child(3) label{--hue:135}
+.cell:nth-child(4) label{--hue:110}
+.cell:nth-child(5) label{--hue:125}
+.cell:nth-child(6) label{--hue:105}
+.cell:nth-child(7) label{--hue:130}
+.cell:nth-child(8) label{--hue:115}
+.cell:nth-child(9) label{--hue:140}
+.cell:nth-child(10) label{--hue:95}
+.cell:nth-child(11) label{--hue:118}
+.cell:nth-child(12) label{--hue:128}
+.cell:nth-child(13) label{--hue:108}
+.cell:nth-child(14) label{--hue:122}
+.cell:nth-child(15) label{--hue:138}
+.cell:nth-child(16) label{--hue:112}
+
+/* Tree color tinting */
+.tree{text-shadow:0 0 0 transparent}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:380px){
+  .island{width:92vw}
+  .grid{gap:2px}
+  .game-header{padding:8px 12px 4px}
+}
+@media(min-height:750px){
+  .island-scene{padding-bottom:20px}
+}
+@media(max-height:600px){
+  .island{width:min(70vw,280px)}
+  .game-header{padding:6px 12px 2px}
+  .instructions{display:none}
+}
+</style>
+</head>
+<body>
+
+<a href="game.html" class="back-link" aria-label="Back to games">←</a>
+
+<div class="game">
+  <div class="sky"><div class="stars"></div></div>
+
+  <div class="game-header">
+    <h1 class="game-title">🏗️ Lighthouse Builder</h1>
+    <div class="timer"><div class="timer-fill"></div></div>
+  </div>
+
+  <div class="instructions">Tap cells to clear trees and build houses. Complete column 2 to build the lighthouse!</div>
+
+  <div class="island-scene">
+    <div class="island">
+      <div class="grid">
+        <!-- Row 1 -->
+        <div class="cell" id="cell1" data-tree><input type="checkbox" id="c1"><label for="c1"><span class="tree">🌲</span><span class="house">🏠</span></label></div>
+        <div class="cell" id="cell2" data-tree><input type="checkbox" id="c2"><label for="c2"><span class="tree">🌲</span><span class="house">🏠</span></label></div>
+        <div class="cell" id="cell3" data-tree><input type="checkbox" id="c3"><label for="c3"><span class="tree">🌲</span><span class="house">🏠</span></label></div>
+        <div class="cell" id="cell4" data-tree><input type="checkbox" id="c4"><label for="c4"><span class="tree">🌲</span><span class="house">🏠</span></label></div>
+        <!-- Row 2 -->
+        <div class="cell" id="cell5" data-tree><input type="checkbox" id="c5"><label for="c5"><span class="tree">🌲</span><span class="house">🏠</span></label></div>
+        <div class="cell" id="cell6" data-tree><input type="checkbox" id="c6"><label for="c6"><span class="tree">🌲</span><span class="house">🏠</span></label></div>
+        <div class="cell" id="cell7" data-tree><input type="checkbox" id="c7"><label for="c7"><span class="tree">🌲</span><span class="house">🏠</span></label></div>
+        <div class="cell" id="cell8" data-tree><input type="checkbox" id="c8"><label for="c8"><span class="tree">🌲</span><span class="house">🏠</span></label></div>
+        <!-- Row 3 -->
+        <div class="cell" id="cell9" data-tree><input type="checkbox" id="c9"><label for="c9"><span class="tree">🌲</span><span class="house">🏠</span></label></div>
+        <div class="cell" id="cell10" data-tree><input type="checkbox" id="c10"><label for="c10"><span class="tree">🌲</span><span class="house">🏠</span></label></div>
+        <div class="cell" id="cell11" data-tree><input type="checkbox" id="c11"><label for="c11"><span class="tree">🌲</span><span class="house">🏠</span></label></div>
+        <div class="cell" id="cell12" data-tree><input type="checkbox" id="c12"><label for="c12"><span class="tree">🌲</span><span class="house">🏠</span></label></div>
+        <!-- Row 4 -->
+        <div class="cell" id="cell13" data-tree><input type="checkbox" id="c13"><label for="c13"><span class="tree">🌲</span><span class="house">🏠</span></label></div>
+        <div class="cell" id="cell14" data-tree><input type="checkbox" id="c14"><label for="c14"><span class="tree">🌲</span><span class="house">🏠</span></label></div>
+        <div class="cell" id="cell15" data-tree><input type="checkbox" id="c15"><label for="c15"><span class="tree">🌲</span><span class="house">🏠</span></label></div>
+        <div class="cell" id="cell16" data-tree><input type="checkbox" id="c16"><label for="c16"><span class="tree">🌲</span><span class="house">🏠</span></label></div>
+      </div>
+
+      <!-- Lighthouse (shown on win) -->
+      <div class="lighthouse">
+        <div class="lh-light"></div>
+        <div class="lh-beam"></div>
+        <div class="lh-cabin"></div>
+        <div class="lh-tower"></div>
+        <div class="lh-base"></div>
+      </div>
+    </div>
+
+    <div class="water-wrap">
+      <div class="water">
+        <div class="wave wave-1"></div>
+        <div class="wave wave-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Win -->
+  <div class="win-msg">
+    <div class="overlay-card">
+      <span class="emoji-big">🎉</span>
+      <h2>Congratulations!</h2>
+      <p>You built the lighthouse! The ships can now see the shore safely.</p>
+      <a href="lighthouse.html" class="restart-btn">Play Again</a>
+    </div>
+  </div>
+
+  <!-- Lose -->
+  <div class="lose-msg">
+    <div class="overlay-card">
+      <span class="emoji-big">⏰</span>
+      <h2>Time's Up!</h2>
+      <p>The lighthouse remains unbuilt. The ships are lost at sea...</p>
+      <a href="lighthouse.html" class="restart-btn">Try Again</a>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
