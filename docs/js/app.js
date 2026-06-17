@@ -121,10 +121,11 @@ function handleDataTransferItems(items) {
   const entries = [];
   for (const item of items) {
     if (item.kind === 'file') {
-      entries.push(item.webkitGetAsEntry ? item.webkitGetAsEntry() : item.getAsEntry());
+      const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : item.getAsEntry();
+      if (entry) entries.push(entry);
     }
   }
-  processEntries(entries);
+  return processEntries(entries);
 }
 
 async function processEntries(entries) {
@@ -395,6 +396,9 @@ function initDragDrop() {
   });
 
   document.addEventListener('drop', async (e) => {
+    // Skip if dropped on a specific drop zone (they have their own handlers)
+    if (e.target.closest('.drop-zone')) return;
+
     e.preventDefault();
     e.stopPropagation();
     dragCounter = 0;
@@ -406,7 +410,7 @@ function initDragDrop() {
       const entries = [];
       for (const item of dt.items) {
         if (item.kind === 'file') {
-          const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+          const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : item.getAsEntry();
           if (entry) entries.push(entry);
         }
       }
@@ -525,14 +529,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.onDragOver = (e, id) => { e.preventDefault(); document.getElementById(id)?.classList.add('drag-over'); };
   window.onDragLeave = (id) => { document.getElementById(id)?.classList.remove('drag-over'); };
-  window.onDrop = (e, id) => {
+  window.onDrop = async (e, id) => {
     e.preventDefault();
     document.getElementById(id)?.classList.remove('drag-over');
     const dt = e.dataTransfer;
+
     if (dt.items && dt.items.length > 0) {
-      handleDataTransferItems(dt.items);
+      showToast(`Loading...`);
+      await handleDataTransferItems(dt.items);
+      showToast('Files loaded');
+    } else if (dt.files && dt.files.length > 0) {
+      const count = dt.files.length;
+      showToast(`Loading ${count} file${count > 1 ? 's' : ''}...`);
+      await handleFiles(dt.files);
+      showToast('Files loaded');
     } else {
-      handleFiles(dt.files);
+      showToast('No supported files found', 'err');
     }
   };
 
