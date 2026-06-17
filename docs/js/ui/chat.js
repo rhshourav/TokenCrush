@@ -1,12 +1,10 @@
 import { state } from '../core/state.js';
 
 let generator = null;
-let tokenizer = null;
 let modelReady = false;
 let isLoading = false;
 let currentFile = null;
 let conversation = [];
-let TextStreamerClass = null;
 
 function $(id) { return document.getElementById(id); }
 
@@ -39,9 +37,9 @@ export function chatClearContext() {
 }
 
 function getSystemPrompt() {
-  let base = 'You are a helpful coding assistant. You help developers understand their code. Be concise and direct. Use markdown formatting for code examples.';
+  let base = 'You are a helpful coding assistant. You help developers understand their code. Be concise and direct.';
   if (currentFile) {
-    const maxLen = 3000;
+    const maxLen = 2000;
     const content = currentFile.content.length > maxLen
       ? currentFile.content.substring(0, maxLen) + '\n... (truncated)'
       : currentFile.content;
@@ -50,13 +48,13 @@ function getSystemPrompt() {
   return base;
 }
 
-function buildMessages(userText) {
-  const msgs = [{ role: 'system', content: getSystemPrompt() }];
+function formatPrompt(userText) {
+  const messages = [{ role: 'system', content: getSystemPrompt() }];
   for (const m of conversation) {
-    msgs.push({ role: m.role, content: m.content });
+    messages.push({ role: m.role, content: m.content });
   }
-  msgs.push({ role: 'user', content: userText });
-  return msgs;
+  messages.push({ role: 'user', content: userText });
+  return messages;
 }
 
 export async function chatDownloadModel() {
@@ -72,9 +70,10 @@ export async function chatDownloadModel() {
   if (progress) progress.classList.remove('hidden');
 
   try {
-    const { pipeline, env, TextStreamer } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4');
+    const transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4');
+    const { pipeline, env } = transformers;
     env.allowLocalModels = false;
-    TextStreamerClass = TextStreamer;
+    env.cacheDir = 'transformers-cache';
 
     if (progressText) progressText.textContent = 'Loading Transformers.js...';
 
@@ -82,7 +81,6 @@ export async function chatDownloadModel() {
       'text-generation',
       'onnx-community/Qwen2.5-0.5B-Instruct',
       {
-        dtype: 'q4',
         progress_callback: (p) => {
           if (p.status === 'downloading' && p.file) {
             const pct = p.progress || 0;
@@ -98,7 +96,6 @@ export async function chatDownloadModel() {
       }
     );
 
-    tokenizer = generator.tokenizer;
     modelReady = true;
     isLoading = false;
 
@@ -115,7 +112,7 @@ export async function chatDownloadModel() {
     if (sendBtn) sendBtn.disabled = false;
     if (readmeBtn) readmeBtn.disabled = false;
 
-    appendMessage('system', 'Model loaded. Ask me anything about your code!');
+    appendMessage('system', 'Model loaded! Ask me anything about your code.');
   } catch (err) {
     isLoading = false;
     if (progress) progress.classList.add('hidden');
@@ -142,44 +139,33 @@ export async function chatSend() {
   isLoading = true;
 
   try {
-    const messages = buildMessages(text);
+    const messages = formatPrompt(text);
     let response = '';
 
-    if (TextStreamerClass && tokenizer) {
-      const streamer = new TextStreamerClass(tokenizer, {
-        skip_prompt: true,
-        skip_special_tokens: true,
-        callback_function: (token) => {
-          response += token;
-          updateLastAssistant(response);
-        }
-      });
+    const result = await generator(messages, {
+      max_new_tokens: 512,
+      temperature: 0.7,
+      do_sample: true
+    });
 
-      await generator(messages, {
-        max_new_tokens: 512,
-        temperature: 0.7,
-        do_sample: true,
-        streamer
-      });
-    } else {
-      const result = await generator(messages, {
-        max_new_tokens: 512,
-        temperature: 0.7,
-        do_sample: true
-      });
-      if (result && result[0]) {
-        const generated = result[0].generated_text;
-        if (Array.isArray(generated)) {
-          response = generated[generated.length - 1]?.content || '';
-        } else {
-          response = generated || '';
-        }
+    if (result && result[0]) {
+      const generated = result[0].generated_text;
+      if (Array.isArray(generated)) {
+        response = generated[generated.length - 1]?.content || '';
+      } else if (typeof generated === 'string') {
+        response = generated;
+      } else {
+        response = JSON.stringify(generated);
       }
-      updateLastAssistant(response);
     }
 
     removeTyping(typingEl);
-    conversation.push({ role: 'assistant', content: response });
+    if (response) {
+      conversation.push({ role: 'assistant', content: response });
+      appendMessage('assistant', response);
+    } else {
+      appendMessage('assistant', '(No response from model)');
+    }
   } catch (err) {
     removeTyping(typingEl);
     appendMessage('system', 'Error: ' + err.message);
@@ -218,17 +204,6 @@ function removeTyping(el) {
   if (el && el.parentNode) el.parentNode.removeChild(el);
 }
 
-function updateLastAssistant(text) {
-  const container = $('chatMessages');
-  if (!container) return;
-  const msgs = container.querySelectorAll('.chat-msg.assistant');
-  const last = msgs[msgs.length - 1];
-  if (last) {
-    last.textContent = text;
-    container.scrollTop = container.scrollHeight;
-  }
-}
-
 export function chatKeydown(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
@@ -260,7 +235,7 @@ export async function chatGenReadme() {
 
   let codeSummary = '';
   let totalLen = 0;
-  const maxLen = 4000;
+  const maxLen = 3000;
 
   for (const [, f] of files) {
     const block = `\n--- ${f.name} ---\n`;
@@ -277,7 +252,6 @@ export async function chatGenReadme() {
 2. Features
 3. File structure
 4. How to use / setup
-5. API or function references if applicable
 
 Here are the files:\n${codeSummary}`;
 
@@ -288,58 +262,43 @@ Here are the files:\n${codeSummary}`;
   isLoading = true;
 
   try {
-    const messages = buildMessages(prompt);
+    const messages = formatPrompt(prompt);
     let response = '';
 
-    if (TextStreamerClass && tokenizer) {
-      const streamer = new TextStreamerClass(tokenizer, {
-        skip_prompt: true,
-        skip_special_tokens: true,
-        callback_function: (token) => {
-          response += token;
-          updateLastAssistant(response);
-        }
-      });
+    const result = await generator(messages, {
+      max_new_tokens: 1024,
+      temperature: 0.5,
+      do_sample: true
+    });
 
-      await generator(messages, {
-        max_new_tokens: 1024,
-        temperature: 0.5,
-        do_sample: true,
-        streamer
-      });
-    } else {
-      const result = await generator(messages, {
-        max_new_tokens: 1024,
-        temperature: 0.5,
-        do_sample: true
-      });
-      if (result && result[0]) {
-        const generated = result[0].generated_text;
-        if (Array.isArray(generated)) {
-          response = generated[generated.length - 1]?.content || '';
-        } else {
-          response = generated || '';
-        }
+    if (result && result[0]) {
+      const generated = result[0].generated_text;
+      if (Array.isArray(generated)) {
+        response = generated[generated.length - 1]?.content || '';
+      } else if (typeof generated === 'string') {
+        response = generated;
       }
-      updateLastAssistant(response);
     }
 
     removeTyping(typingEl);
-    conversation.push({ role: 'assistant', content: response });
-
-    const container = $('chatMessages');
-    if (container) {
-      const readmeDiv = document.createElement('div');
-      readmeDiv.className = 'chat-msg readme';
-      readmeDiv.innerHTML = `
-        <div class="readme-header">
-          <span>Generated README.md</span>
-          <button class="btn btn-sm" onclick="navigator.clipboard.writeText(this.closest('.chat-msg').querySelector('.readme-body').textContent)">Copy</button>
-        </div>
-        <div class="readme-body">${escH(response)}</div>
-      `;
-      container.appendChild(readmeDiv);
-      container.scrollTop = container.scrollHeight;
+    if (response) {
+      conversation.push({ role: 'assistant', content: response });
+      const container = $('chatMessages');
+      if (container) {
+        const readmeDiv = document.createElement('div');
+        readmeDiv.className = 'chat-msg readme';
+        readmeDiv.innerHTML = `
+          <div class="readme-header">
+            <span>Generated README.md</span>
+            <button class="btn btn-sm" onclick="navigator.clipboard.writeText(this.closest('.chat-msg').querySelector('.readme-body').textContent)">Copy</button>
+          </div>
+          <div class="readme-body">${escH(response)}</div>
+        `;
+        container.appendChild(readmeDiv);
+        container.scrollTop = container.scrollHeight;
+      }
+    } else {
+      appendMessage('assistant', '(No response from model)');
     }
   } catch (err) {
     removeTyping(typingEl);

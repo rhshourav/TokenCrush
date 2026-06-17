@@ -134,7 +134,7 @@
       <input class="search-input" id="fileSearch" type="text" placeholder="Filter files…" oninput="filterFiles(this.value)">
     </div>
 
-    <div class="drop-zone" id="sidebarDrop" onclick="triggerFileInput()">
+    <div class="drop-zone" id="sidebarDrop" onclick="triggerFileInput()" ondragover="onDragOver(event,'sidebarDrop')" ondragleave="onDragLeave('sidebarDrop')" ondrop="onDrop(event,'sidebarDrop')">
       <div class="dz-icon">📂</div>
       <strong>Drop files, folders or ZIP</strong>
       <p>.js .ts .html .css .py<br>.c .cpp .json .md .zip · folders OK</p>
@@ -435,10 +435,6 @@
 </div>
 
 <script type="module" src="js/app.js"></script>
-
-<!-- Visitor counter (counter.dev) -->
-<script src="https://cdn.counter.dev/script.js" data-id="e4319c82-eefb-4be8-8c36-423c41ac6246" data-utcoffset="6"></script>
-<script>try{counter("e4319c82-eefb-4be8-8c36-423c41ac6246",{"target":"#visitorCount"})}catch(e){}</script>
 
 </body>
 </html>

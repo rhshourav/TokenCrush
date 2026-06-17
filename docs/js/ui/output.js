@@ -10,7 +10,7 @@ export function renderOutput(id) {
   const sb = document.getElementById('statsBar');
 
   if (oe) oe.style.display = 'none';
-  if (oc) { oc.value = f.compressed; oc.style.display = 'block'; }
+  if (oc) oc.value = f.compressed;
   if (sb) sb.style.display = 'block';
 
   const saved = f.tokenIn - f.tokenOut;
@@ -219,9 +219,8 @@ export function switchTab(name) {
   const outEmpty = document.getElementById('outEmpty');
   const outCode = document.getElementById('outCode');
 
-  // Hide everything
   if (outEmpty) outEmpty.style.display = 'none';
-  if (outCode) { outCode.style.display = 'none'; outCode.classList.remove('show'); }
+  if (outCode) outCode.style.display = 'none';
   if (chatPanel) chatPanel.classList.add('hidden');
   document.querySelectorAll('.diff-view,.prompt-view,.bundle-view,.history-view').forEach(d => d.classList.remove('show'));
 
@@ -232,12 +231,14 @@ export function switchTab(name) {
     return;
   }
 
+  const activeFileId = state.activeFileId;
+  const f = activeFileId ? state.files.get(activeFileId) : null;
+
   if (name === 'compressed') {
-    if (outCode) { outCode.style.display = 'block'; outCode.classList.add('show'); }
-    // Show empty state if no content
-    if (outCode && !outCode.value) {
+    if (f && f.compressed) {
+      if (outCode) { outCode.value = f.compressed; outCode.style.display = 'block'; }
+    } else {
       if (outEmpty) outEmpty.style.display = 'flex';
-      if (outCode) outCode.style.display = 'none';
     }
     return;
   }
@@ -252,6 +253,12 @@ export function switchTab(name) {
   const target = document.getElementById(tabMap[name]);
   if (target) target.classList.add('show');
 
+  if (name === 'diff' && f && f.compressed) {
+    buildDiff(f.content, f.compressed);
+  }
+  if (name === 'prompt' && f) {
+    buildPromptView(f);
+  }
   if (name === 'bundle') buildBundleView();
   if (name === 'history') buildHistoryView();
 }

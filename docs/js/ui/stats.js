@@ -1,35 +1,53 @@
-const STORAGE_KEY_TC = 'tokencrush-stats';
+const STATS_API = 'https://tokencrush-stats.rhshourav02.workers.dev';
 
-function loadStats() {
+let cachedStats = { visitors: 0, filesCompressed: 0 };
+
+async function fetchStats() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_TC);
-    return raw ? JSON.parse(raw) : { filesCompressed: 0, sessions: 0 };
-  } catch { return { filesCompressed: 0, sessions: 0 }; }
-}
-
-function saveStats(stats) {
-  try { localStorage.setItem(STORAGE_KEY_TC, JSON.stringify(stats)); } catch {}
+    const res = await fetch(`${STATS_API}/api/stats`);
+    if (res.ok) {
+      cachedStats = await res.json();
+      renderStats(cachedStats);
+    }
+  } catch {}
 }
 
 export function initStats() {
-  const stats = loadStats();
-  stats.sessions++;
-  saveStats(stats);
-  renderStats(stats);
+  renderStats(cachedStats);
+  fetchStats();
+  notifyVisit();
 }
 
-export function trackFileCompressed(count) {
-  const stats = loadStats();
-  stats.filesCompressed += count;
-  saveStats(stats);
-  renderStats(stats);
+async function notifyVisit() {
+  try {
+    const res = await fetch(`${STATS_API}/api/stats/visit`, { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      cachedStats.visitors = data.visitors;
+      renderStats(cachedStats);
+    }
+  } catch {}
+}
+
+export async function trackFileCompressed(count) {
+  renderStats(cachedStats);
+  try {
+    const res = await fetch(`${STATS_API}/api/stats/compress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ count })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      cachedStats.filesCompressed = data.filesCompressed;
+      renderStats(cachedStats);
+    }
+  } catch {}
 }
 
 function renderStats(stats) {
-  const el = document.getElementById('statsDisplay');
-  if (!el) return;
   const vc = document.getElementById('visitorCount');
   const fc = document.getElementById('filesCompressedCount');
-  if (vc) vc.textContent = '—';
+  if (vc) vc.textContent = stats.visitors.toLocaleString();
   if (fc) fc.textContent = stats.filesCompressed.toLocaleString();
 }

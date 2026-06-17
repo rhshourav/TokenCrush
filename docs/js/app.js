@@ -5,7 +5,7 @@ import { estTok } from './core/helpers.js';
 import { addFile, addFolder, clearAll, compressFileById, compressAllFiles } from './core/engine.js';
 import { getLanguage, isCompressible, getLangBadgeClass } from './languages/index.js';
 import { renderFileList, updateFileCount, filterFiles } from './ui/sidebar.js';
-import { selectFile, showEditorEmpty, updateEditorMeta, onEditorInput, updateBudgetBar, onFileSelect } from './ui/editor.js';
+import { selectFile, showEditorEmpty, updateEditorMeta, onEditorInput, updateBudgetBar, onFileSelect, onRenderOutput } from './ui/editor.js';
 import { renderOutput, showOutEmpty, switchTab, setProgress, copyOutput, exportBundle, showToast, buildBundleView, buildHistoryView, toggleCtx } from './ui/output.js';
 import { initTheme, toggleTheme } from './ui/theme.js';
 import { openFindBar, closeFindBar, doFind, findNext, findPrev, doReplace, doReplaceAll } from './ui/find.js';
@@ -483,6 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initChat();
   initStats();
   onFileSelect(setChatContext);
+  onRenderOutput(renderOutput);
 
   const themeBtn = document.getElementById('themeToggle');
   if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
@@ -515,8 +516,10 @@ document.addEventListener('DOMContentLoaded', () => {
     renderFileList();
     updateFileCount();
     updateGlobalStats();
-    buildBundleView();
-    switchTab('bundle');
+    const firstId = entries[0][0];
+    state.activeFileId = firstId;
+    renderOutput(firstId);
+    renderFileList();
     showToast('All files compressed');
   };
 

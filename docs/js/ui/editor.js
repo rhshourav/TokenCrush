@@ -3,7 +3,9 @@ import { estTok } from '../core/helpers.js';
 import { getLanguage, getLangBadgeClass } from '../languages/index.js';
 
 let _onFileSelect = null;
+let _onRenderOutput = null;
 export function onFileSelect(cb) { _onFileSelect = cb; }
+export function onRenderOutput(cb) { _onRenderOutput = cb; }
 
 export function selectFile(id) {
   const f = state.files.get(id);
@@ -35,6 +37,7 @@ export function selectFile(id) {
   updateBudgetBar();
 
   if (_onFileSelect) _onFileSelect(f);
+  if (_onRenderOutput) _onRenderOutput(id);
 }
 
 export function showEditorEmpty() {

@@ -1,0 +1,10 @@
+name = "tokencrush-stats"
+main = "index.js"
+compatibility_date = "2024-12-01"
+
+[[kv_namespaces]]
+binding = "STATS"
+id = "089a59a6689d452da54eb7f5a86420bd"
+
+[env]
+vars = { CORS_ORIGIN = "https://rhshourav.github.io" }

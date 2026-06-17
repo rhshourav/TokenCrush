@@ -24,7 +24,7 @@
   --shadow-card:none;
   --sidebar-w:228px;
   --header-h:52px;
-  --out-w:400px;
+  --out-w:50%;
 }
 :root[data-theme="light"]{
   --bg:#f4f4f7;
