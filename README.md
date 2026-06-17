@@ -21,7 +21,7 @@
 
 TokenCrush is a **zero-dependency, browser-only web app** that strips your code down before you paste it into a Claude prompt. Drop in your files, choose a compression strategy, and get back a tighter version — with a live token counter, a diff viewer, and a ready-to-paste prompt bundle.
 
-It runs entirely in the browser. No server. No install. No data leaves your machine (unless you turn on AI mode, which calls the Anthropic API directly from your client).
+It runs entirely in the browser. No server. No install. No data leaves your machine. The AI chat feature also runs 100% client-side using a small language model (Qwen2.5 0.5B) via WebAssembly — zero cloud calls.
 
 ---
 
@@ -39,14 +39,25 @@ It runs entirely in the browser. No server. No install. No data leaves your mach
 - **Semantic** — rewrites with ternaries, destructuring, and method chaining (100% logical equivalence)
 - **Deep** — most aggressive: renames all identifiers, collapses everything, outputs a full identifier map
 
+**AI Chat** — built-in chat panel powered by **Qwen2.5 0.5B Instruct** running entirely in the browser via [Transformers.js](https://github.com/huggingface/transformers.js):
+- Ask questions about your code — the active file is automatically included as context
+- **Generate README** button creates a markdown README from all loaded files
+- Streaming responses with progress indicator
+- Model downloads ~300MB on first use, then cached in browser
+- Works offline once loaded — zero data leaves your device
+
 **Context map** — whenever identifiers are renamed, a collapsible drawer lists every `originalName → _x` mapping so Claude can still reason about your code.
 
-**Output tabs** — five views:
+**Output tabs** — seven views:
 - `Compressed` — the raw output
 - `Diff` — red/green line-by-line diff
 - `Prompt` — ready-to-paste Claude prompt block
 - `Bundle` — all files combined
 - `History` — session compression history
+- `All Stats` — per-file breakdown
+- `Chat` — AI assistant (client-side Qwen2.5 0.5B)
+
+**Drag and drop** — drop files, folders, or ZIP archives anywhere on the page. Full-screen overlay with visual feedback. Supports recursive folder reading via `webkitGetAsEntry`.
 
 **Stats bar** — input tokens, output tokens, percentage saved, colour-coded gauge.
 
@@ -66,6 +77,31 @@ AI compression calls the Anthropic API from your browser. You'll need an API key
 
 > AI mode is optional. The local engine alone typically saves 30–60% of tokens.
 
+### Using AI Chat
+
+1. Click the **Chat** tab in the output panel
+2. Click **Download Model** (~300MB, first time only — cached after)
+3. Select a file from the sidebar to set context
+4. Ask questions about your code
+5. Use **Generate README** to create markdown documentation from all loaded files
+
+---
+
+## Deployment
+
+### GitHub Pages (default)
+
+Pushes to `main` auto-deploy via `.github/workflows/deploy.yml`.
+
+### Cloudflare Pages
+
+An alternative workflow is provided at `.github/workflows/deploy-cf.yml`. To enable:
+
+1. Create a [Cloudflare Pages](https://pages.cloudflare.com/) project
+2. Get your `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`
+3. Add them as GitHub repo secrets (Settings → Secrets → Actions)
+4. The workflow runs automatically on push to `main`
+
 ---
 
 ## Repository Layout
@@ -74,41 +110,43 @@ AI compression calls the Anthropic API from your browser. You'll need an API key
 tc/
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml          # CI: validate + deploy to GitHub Pages
-├── docs/                       # Live site root
-│   ├── index.html              # App shell (HTML + CSS)
-│   ├── styles.css              # All CSS (850+ lines)
-│   ├── js/                     # ES modules (zero build step)
-│   │   ├── app.js              # Entry point
-│   │   ├── core/
-│   │   │   ├── engine.js       # Compression pipeline
-│   │   │   ├── state.js        # Global state
-│   │   │   ├── config.js       # Constants
-│   │   │   └── helpers.js      # Utility functions
-│   │   ├── languages/
-│   │   │   ├── registry.js     # Language registry
-│   │   │   ├── javascript.js   # JS/TS
-│   │   │   ├── c-cpp.js        # C/C++
-│   │   │   ├── css.js          # CSS/SCSS/SASS
-│   │   │   ├── html.js         # HTML
-│   │   │   ├── python.js       # Python
-│   │   │   └── other.js        # JSON, MD, YAML, etc.
-│   │   ├── passes/
-│   │   │   ├── registry.js     # Compression pass registry
-│   │   │   ├── comments.js     # Comment stripping
-│   │   │   ├── whitespace.js   # Whitespace optimization
-│   │   │   └── identifiers.js  # Identifier minification
-│   │   ├── ai/
-│   │   │   └── compressor.js   # AI API layer
-│   │   └── ui/
-│   │       ├── sidebar.js      # File list panel
-│   │       ├── editor.js       # Code editor panel
-│   │       ├── output.js       # Output panel + tabs
-│   │       ├── theme.js        # Theme toggle
-│   │       └── find.js         # Find & replace
+│       ├── deploy.yml              # CI: validate + deploy to GitHub Pages
+│       └── deploy-cf.yml           # CI: deploy to Cloudflare Pages
+├── docs/                           # Live site root
+│   ├── index.html                  # App shell
+│   ├── styles.css                  # All CSS (1000+ lines)
+│   ├── game.html                   # Mobile game hub
+│   ├── dungeon.html                # CSS-only dungeon game
+│   ├── lighthouse.html             # CSS-only lighthouse builder game
 │   ├── 404.html
 │   ├── robots.txt
-│   └── assets/
+│   └── js/                         # ES modules (zero build step)
+│       ├── app.js                  # Entry point
+│       ├── core/
+│       │   ├── engine.js           # Compression pipeline
+│       │   ├── state.js            # Global state
+│       │   ├── config.js           # Constants
+│       │   └── helpers.js          # Utility functions
+│       ├── languages/
+│       │   ├── registry.js         # Language registry
+│       │   ├── javascript.js       # JS/TS
+│       │   ├── c-cpp.js            # C/C++
+│       │   ├── css.js              # CSS/SCSS/SASS
+│       │   ├── html.js             # HTML
+│       │   ├── python.js           # Python
+│       │   └── other.js            # JSON, MD, YAML, etc.
+│       ├── passes/
+│       │   ├── registry.js         # Compression pass registry
+│       │   ├── comments.js         # Comment stripping
+│       │   ├── whitespace.js       # Whitespace optimization
+│       │   └── identifiers.js      # Identifier minification
+│       └── ui/
+│           ├── sidebar.js          # File list panel
+│           ├── editor.js           # Code editor panel
+│           ├── output.js           # Output panel + tabs
+│           ├── chat.js             # AI chat (Qwen2.5 0.5B via Transformers.js)
+│           ├── theme.js            # Theme toggle
+│           └── find.js             # Find & replace
 ├── img/
 │   └── baner.png
 ├── CONTRIBUTORS.md
@@ -156,6 +194,10 @@ registerPass('DeadCode', {
 });
 ```
 
+### AI Chat Module
+
+The chat module (`ui/chat.js`) dynamically imports [Transformers.js](https://github.com/huggingface/transformers.js) from CDN and loads `onnx-community/Qwen2.5-0.5B-Instruct`. It uses `TextStreamer` for streaming responses and falls back to non-streaming if needed. The model runs entirely client-side via WASM — no WebGPU required.
+
 ### Adding a Language
 
 1. Create `docs/js/languages/mylang.js`
@@ -189,11 +231,24 @@ TokenCrush estimates token count as `ceil(characters / 3.8)` — a reasonable ap
 
 ---
 
+## Tech Stack
+
+| Component | Technology |
+|---|---|
+| Frontend | Vanilla JS (ES modules, zero build step) |
+| AI Chat | [Transformers.js](https://github.com/huggingface/transformers.js) + Qwen2.5 0.5B (WASM) |
+| Compression | Custom engine (comments, whitespace, identifiers) |
+| Games | Pure CSS (no JavaScript) |
+| Hosting | GitHub Pages + Cloudflare Pages |
+
+---
+
 ## Contributing
 
 See [CONTRIBUTORS.md](CONTRIBUTORS.md) for:
 - How to add a new language
 - How to add a new compression pass
+- How to add a new game
 - Code style and conventions
 - PR process
 

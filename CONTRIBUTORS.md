@@ -39,12 +39,11 @@ docs/js/
 │   ├── comments.js     # Comment stripping (language-aware)
 │   ├── whitespace.js   # Whitespace optimization
 │   └── identifiers.js  # Identifier minification
-├── ai/                 # AI layer
-│   └── compressor.js   # Anthropic API calls
 └── ui/                 # UI modules
     ├── sidebar.js      # File list, folder tree, drag-and-drop
     ├── editor.js       # Code editor, token pill, budget bar
-    ├── output.js       # Output tabs, diff, prompt, bundle, history
+    ├── output.js       # Output tabs, diff, prompt, bundle, history, chat
+    ├── chat.js         # AI chat (Qwen2.5 0.5B via Transformers.js, client-side)
     ├── theme.js        # Light/dark toggle
     └── find.js         # Find & replace
 ```
@@ -216,11 +215,31 @@ const tabMap = { ..., mytab: 'myTabView' };
 ## Code Style
 
 - **No build step** — use ES modules (`import`/`export`), no bundlers
-- **No external dependencies** — everything is vanilla JS
+- **No external dependencies** — everything is vanilla JS (Transformers.js is loaded dynamically from CDN at runtime, not a build dependency)
 - **Browser-first** — test in Chrome/Firefox/Safari
 - **Functional where possible** — avoid classes, prefer pure functions
 - **String escaping** — use `escH()` for innerHTML, `escAttr()` for attributes
 - **Reserved words** — always maintain comprehensive sets per language
+
+---
+
+## How to Add a New Game (Mobile)
+
+TokenCrush redirects mobile users to `game.html` — a touch-optimized game hub. To add a game:
+
+1. Create `docs/yourgame.html` — standalone HTML + CSS (no JS required for CSS-only games)
+2. Add a game card in `docs/game.html`:
+```html
+<a href="yourgame.html" class="game-card">
+  <div class="game-icon" style="background:linear-gradient(135deg,#color1,#color2)">🎮</div>
+  <div class="game-info">
+    <div class="game-title">Game Name</div>
+    <div class="game-desc">Short description.</div>
+  </div>
+  <span class="game-badge play">Play</span>
+</a>
+```
+3. Validate: `npx html-validate@8 docs/game.html docs/yourgame.html`
 
 ---
 
