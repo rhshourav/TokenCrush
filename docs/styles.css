@@ -249,6 +249,7 @@ header{
 :root[data-theme="light"] .lang-html{color:#b8401f}
 .lang-css{background:rgba(62,207,142,.12);color:var(--green);border:1px solid rgba(62,207,142,.2)}
 .lang-py{background:rgba(124,109,250,.15);color:var(--accent2);border:1px solid rgba(124,109,250,.25)}
+.lang-c,.lang-cpp{background:rgba(0,150,200,.15);color:#0096c8;border:1px solid rgba(0,150,200,.25)}
 .lang-other{background:var(--surface3);color:var(--muted);border:1px solid var(--border2)}
 .token-pill{
   font-size:10px;color:var(--muted);background:var(--surface3);

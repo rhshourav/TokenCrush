@@ -72,7 +72,7 @@
     <button class="btn" type="button" onclick="clearAll()">Clear all</button>
     <button class="btn btn-green" type="button" onclick="exportBundle()">Export bundle</button>
     <button class="btn btn-accent" type="button" onclick="triggerFileInput()">+ Add files</button>
-    <input type="file" id="globalFileInput" class="hidden" multiple accept=".js,.ts,.jsx,.tsx,.html,.css,.py,.json,.md,.txt,.zip" onchange="handleFileInputChange(this)">
+    <input type="file" id="globalFileInput" class="hidden" multiple accept=".js,.ts,.jsx,.tsx,.html,.css,.py,.json,.md,.txt,.c,.cpp,.h,.hpp,.zip" onchange="handleFileInputChange(this)">
     <input type="file" id="globalFolderInput" class="hidden" multiple webkitdirectory onchange="handleFolderInputChange(this)">
     <div class="hdr-sep"></div>
     <a class="author-chip" href="https://github.com/rhshourav/TC" target="_blank" rel="noopener" title="View on GitHub by @rhshourav">
@@ -113,7 +113,7 @@
     <div class="drop-zone" id="sidebarDrop" onclick="triggerFileInput()" ondragover="onDragOver(event,'sidebarDrop')" ondragleave="onDragLeave('sidebarDrop')" ondrop="onDrop(event,'sidebarDrop')">
       <div class="dz-icon">📂</div>
       <strong>Drop files, folders or ZIP</strong>
-      <p>.js .ts .html .css .py<br>.json .md .zip · folders OK</p>
+      <p>.js .ts .html .css .py<br>.c .cpp .json .md .zip · folders OK</p>
     </div>
 
     <div class="file-list" id="fileList"></div>
@@ -367,7 +367,7 @@
   </div>
 </div>
 
-<script src="app.js"></script>
+<script type="module" src="js/app.js"></script>
 
 </body>
 </html>
