@@ -73,16 +73,15 @@ export function renderCtxMap(ctxMap) {
 
   if (badge) badge.textContent = ctxMap.length;
 
-  let html = '<div class="ctx-list">';
+  let html = '';
   for (const entry of ctxMap) {
-    html += `<div class="ctx-entry">
+    html += `<div class="ctx-item">
       <span class="ctx-from">${escH(entry.from)}</span>
       <span class="ctx-arrow">→</span>
       <span class="ctx-to">${escH(entry.to)}</span>
       <span class="ctx-count">(${entry.count})</span>
     </div>`;
   }
-  html += '</div>';
   body.innerHTML = html;
 }
 
