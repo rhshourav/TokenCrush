@@ -3,15 +3,20 @@ import { estTok } from '../core/helpers.js';
 
 export function renderOutput(id) {
   const f = state.files.get(id);
-  if (!f || !f.compressed) return;
+  if (!f || !f.compressed) {
+    showOutEmpty();
+    return;
+  }
 
   const oe = document.getElementById('outEmpty');
   const oc = document.getElementById('outCode');
   const sb = document.getElementById('statsBar');
+  const ofn = document.getElementById('outFilename');
 
   if (oe) oe.style.display = 'none';
   if (oc) { oc.value = f.compressed; oc.style.display = 'block'; }
   if (sb) sb.style.display = 'block';
+  if (ofn) { ofn.textContent = f.name; ofn.title = f.name; }
 
   const saved = f.tokenIn - f.tokenOut;
   const pct = f.tokenIn > 0 ? Math.round((saved / f.tokenIn) * 100) : 0;
@@ -63,17 +68,20 @@ export function updateGauge(tokens) {
 export function renderCtxMap(ctxMap) {
   const body = document.getElementById('ctxBody');
   const badge = document.getElementById('ctxBadge');
-  if (!body) return;
+  const tabView = document.getElementById('contextView');
+
+  const emptyHtml = '<div class="ctx-empty" style="padding:20px;text-align:center;color:var(--muted);font-size:12px">No identifier mappings</div>';
 
   if (!ctxMap || ctxMap.length === 0) {
-    body.innerHTML = '<div class="ctx-empty">No identifier mappings</div>';
+    if (body) body.innerHTML = emptyHtml;
     if (badge) badge.textContent = '0';
+    if (tabView) tabView.innerHTML = emptyHtml;
     return;
   }
 
   if (badge) badge.textContent = ctxMap.length;
 
-  let html = '';
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:4px;padding:14px">';
   for (const entry of ctxMap) {
     html += `<div class="ctx-item">
       <span class="ctx-from">${escH(entry.from)}</span>
@@ -82,7 +90,10 @@ export function renderCtxMap(ctxMap) {
       <span class="ctx-count">(${entry.count})</span>
     </div>`;
   }
-  body.innerHTML = html;
+  html += '</div>';
+
+  if (body) body.innerHTML = html;
+  if (tabView) tabView.innerHTML = html;
 }
 
 function escH(s) {
@@ -93,9 +104,13 @@ export function buildDiff(orig, comp) {
   const diffView = document.getElementById('diffView');
   if (!diffView) return;
 
+  if (!orig || !comp) {
+    diffView.innerHTML = '<div class="diff-empty" style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Compress the file first to see the diff</div>';
+    return;
+  }
+
   const origLines = orig.split('\n').slice(0, 30);
   const compLines = comp.split('\n').slice(0, 30);
-  const maxLen = Math.max(origLines.length, compLines.length);
 
   let html = '<div class="diff-container">';
   html += '<div class="diff-col diff-orig"><div class="diff-header">Original</div>';
@@ -116,6 +131,11 @@ export function buildDiff(orig, comp) {
 export function buildPromptView(f) {
   const promptView = document.getElementById('promptView');
   if (!promptView) return;
+
+  if (!f.compressed) {
+    promptView.innerHTML = '<div class="prompt-empty" style="padding:20px;text-align:center;color:var(--muted)">Compress the file first to see the prompt</div>';
+    return;
+  }
 
   const prefix = document.getElementById('prefixInput')?.value || '';
   let prompt = prefix + '\n\n';
@@ -253,8 +273,8 @@ export function switchTab(name) {
   const target = document.getElementById(tabMap[name]);
   if (target) target.classList.add('show');
 
-  if (name === 'diff' && f && f.compressed) {
-    buildDiff(f.content, f.compressed);
+  if (name === 'diff') {
+    buildDiff(f ? f.content : null, f ? f.compressed : null);
   }
   if (name === 'prompt' && f) {
     buildPromptView(f);

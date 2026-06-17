@@ -70,22 +70,27 @@ export async function chatDownloadModel() {
   if (progress) progress.classList.remove('hidden');
 
   try {
-    const transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4');
+    const transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0');
     const { pipeline, env } = transformers;
-    env.allowLocalModels = false;
-    env.cacheDir = 'transformers-cache';
+    env.allowLocalModels = true;
+    env.cacheDir = 'tokencrush-models';
+    env.useWasmCache = true;
 
-    if (progressText) progressText.textContent = 'Loading Transformers.js...';
+    if (progressText) progressText.textContent = 'Checking local cache...';
 
     generator = await pipeline(
       'text-generation',
       'onnx-community/Qwen2.5-0.5B-Instruct',
       {
         progress_callback: (p) => {
-          if (p.status === 'downloading' && p.file) {
+          if (p.status === 'cache') {
+            if (progressText) progressText.textContent = `Loading from cache: ${p.file || ''}`;
+          } else if (p.status === 'download' || p.status === 'downloading') {
             const pct = p.progress || 0;
+            const file = p.file || '';
+            const fileSize = p.totalSize ? ` (${(p.totalSize / 1048576).toFixed(1)}MB)` : '';
             if (progressFill) progressFill.style.width = pct + '%';
-            if (progressText) progressText.textContent = `Downloading: ${p.file} (${Math.round(pct)}%)`;
+            if (progressText) progressText.textContent = `Downloading to cache: ${file}${fileSize} (${Math.round(pct)}%)`;
           } else if (p.status === 'loading') {
             if (progressText) progressText.textContent = 'Loading model into memory...';
             if (progressFill) progressFill.style.width = '100%';

@@ -40,8 +40,10 @@ function handleFiles(fileList, parentFolderId = null) {
   const promises = [];
   let added = 0;
   let skipped = 0;
-  for (const file of fileList) {
-    if (file.name.endsWith('.zip')) {
+  for (let i = 0; i < fileList.length; i++) {
+    const file = fileList[i];
+    if (!file) continue;
+    if (file.name && file.name.endsWith('.zip')) {
       promises.push(handleZip(file, parentFolderId));
       added++;
       continue;
@@ -50,15 +52,20 @@ function handleFiles(fileList, parentFolderId = null) {
 
     added++;
     const p = new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        addFile(file.name, e.target.result, parentFolderId);
-        renderFileList();
-        updateFileCount();
+      try {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          addFile(file.name, e.target.result, parentFolderId);
+          renderFileList();
+          updateFileCount();
+          resolve();
+        };
+        reader.onerror = () => resolve();
+        reader.readAsText(file);
+      } catch (e) {
+        console.warn('FileReader error', e);
         resolve();
-      };
-      reader.onerror = () => resolve();
-      reader.readAsText(file);
+      }
     });
     promises.push(p);
   }
@@ -123,10 +130,16 @@ async function loadJSZip() {
 
 function handleDataTransferItems(items) {
   const entries = [];
-  for (const item of items) {
+  const len = items.length;
+  for (let i = 0; i < len; i++) {
+    const item = items[i];
     if (item.kind === 'file') {
-      const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : item.getAsEntry();
-      if (entry) entries.push(entry);
+      try {
+        const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : item.getAsEntry();
+        if (entry) entries.push(entry);
+      } catch (e) {
+        console.warn('Failed to read dropped entry', e);
+      }
     }
   }
   return processEntries(entries);
@@ -395,7 +408,13 @@ function initKeyboardShortcuts() {
   document.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault();
-      if (state.activeFileId) compressFileById(state.activeFileId);
+      if (state.activeFileId) {
+        compressFileById(state.activeFileId);
+        renderOutput(state.activeFileId);
+        renderFileList();
+        updateFileCount();
+        updateGlobalStats();
+      }
     }
     if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
       e.preventDefault();
@@ -432,7 +451,6 @@ function initDragDrop() {
   });
 
   document.addEventListener('drop', async (e) => {
-    // Skip if dropped on a specific drop zone (they have their own handlers)
     if (e.target.closest('.drop-zone')) return;
 
     e.preventDefault();
@@ -442,31 +460,37 @@ function initDragDrop() {
 
     const dt = e.dataTransfer;
 
+    let result = null;
     if (dt.items && dt.items.length > 0) {
+      showToast(`Loading...`);
       const entries = [];
-      for (const item of dt.items) {
+      for (let i = 0; i < dt.items.length; i++) {
+        const item = dt.items[i];
         if (item.kind === 'file') {
-          const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : item.getAsEntry();
-          if (entry) entries.push(entry);
+          try {
+            const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : item.getAsEntry();
+            if (entry) entries.push(entry);
+          } catch (err) {
+            console.warn('getEntry failed', err);
+          }
         }
       }
       if (entries.length > 0) {
-        showToast(`Loading ${entries.length} item${entries.length > 1 ? 's' : ''}...`);
-        const { added, skipped } = await processEntries(entries);
-        reportLoadResult(added, skipped);
-        return;
+        result = await processEntries(entries);
       }
     }
-
-    if (dt.files && dt.files.length > 0) {
-      const count = dt.files.length;
-      showToast(`Loading ${count} file${count > 1 ? 's' : ''}...`);
-      const { added, skipped } = await handleFiles(dt.files);
-      reportLoadResult(added, skipped);
-      return;
+    if (!result || (result.added === 0 && result.skipped === 0)) {
+      if (dt.files && dt.files.length > 0) {
+        const count = dt.files.length;
+        showToast(`Loading ${count} file${count > 1 ? 's' : ''}...`);
+        result = await handleFiles(dt.files);
+      }
     }
-
-    showToast('No supported files found', 'err');
+    if (result) {
+      reportLoadResult(result.added, result.skipped);
+    } else {
+      showToast('No supported files found', 'err');
+    }
   });
 }
 
@@ -533,7 +557,15 @@ document.addEventListener('DOMContentLoaded', () => {
   initChat();
   initStats();
   onFileSelect(setChatContext);
-  onRenderOutput(renderOutput);
+  onRenderOutput((id) => {
+    const f = state.files.get(id);
+    if (f && !f.compressed && document.getElementById('tglAutoCompress')?.checked) {
+      compressFileById(id);
+      renderFileList();
+      updateFileCount();
+    }
+    renderOutput(id);
+  });
 
   // Responsive sidebar toggle
   function toggleSidebar() {
@@ -593,15 +625,20 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById(id)?.classList.remove('drag-over');
     const dt = e.dataTransfer;
 
+    let result = null;
     if (dt.items && dt.items.length > 0) {
       showToast(`Loading...`);
-      const { added, skipped } = await handleDataTransferItems(dt.items);
-      reportLoadResult(added, skipped);
-    } else if (dt.files && dt.files.length > 0) {
-      const count = dt.files.length;
-      showToast(`Loading ${count} file${count > 1 ? 's' : ''}...`);
-      const { added, skipped } = await handleFiles(dt.files);
-      reportLoadResult(added, skipped);
+      result = await handleDataTransferItems(dt.items);
+    }
+    if (!result || (result.added === 0 && result.skipped === 0)) {
+      if (dt.files && dt.files.length > 0) {
+        const count = dt.files.length;
+        showToast(`Loading ${count} file${count > 1 ? 's' : ''}...`);
+        result = await handleFiles(dt.files);
+      }
+    }
+    if (result) {
+      reportLoadResult(result.added, result.skipped);
     } else {
       showToast('No supported files found', 'err');
     }

@@ -64,7 +64,7 @@
     <span class="logo-text">TokenCrush</span>
     <span class="logo-badge">FOR CLAUDE</span>
   </a>
-  <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle sidebar" title="Toggle sidebar">
+  <button class="sidebar-toggle" type="button" onclick="toggleSidebar()" aria-label="Toggle sidebar" title="Toggle sidebar">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M3 12h18M3 6h18M3 18h18"/>
     </svg>
@@ -72,12 +72,21 @@
 
   <!-- Global session stats -->
   <div class="global-stats hidden" id="globalStats">
-    <div class="hdr-sep"></div>
-    <div class="gs-item">Files: <span class="gs-val" id="gsTotalFiles">0</span></div>
-    <div class="hdr-sep"></div>
-    <div class="gs-item">Saved: <span class="gs-val green" id="gsTotalSaved">0</span> tok</div>
-    <div class="hdr-sep"></div>
-    <div class="gs-item">Avg: <span class="gs-val green" id="gsAvgReduction">0%</span></div>
+    <div class="gs-chip">
+      <span class="gs-chip-icon">📁</span>
+      <span class="gs-chip-val" id="gsTotalFiles">0</span>
+      <span class="gs-chip-lbl">files</span>
+    </div>
+    <div class="gs-chip">
+      <span class="gs-chip-icon">💾</span>
+      <span class="gs-chip-val green" id="gsTotalSaved">0</span>
+      <span class="gs-chip-lbl">saved</span>
+    </div>
+    <div class="gs-chip">
+      <span class="gs-chip-icon">📊</span>
+      <span class="gs-chip-val green" id="gsAvgReduction">0%</span>
+      <span class="gs-chip-lbl">avg</span>
+    </div>
   </div>
 
   <div class="stats-display" id="statsDisplay">
