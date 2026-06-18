@@ -363,6 +363,18 @@
               <div class="chat-model-size">~300MB · Runs in your browser</div>
             </div>
           </div>
+          <div class="chat-requirements" id="chatRequirements">
+            <div class="chat-req-item" id="reqWebGPU">
+              <span class="chat-req-icon">⏳</span>
+              <span class="chat-req-label">WebGPU</span>
+              <span class="chat-req-status">Checking...</span>
+            </div>
+            <div class="chat-req-item" id="reqMemory">
+              <span class="chat-req-icon">⏳</span>
+              <span class="chat-req-label">Memory</span>
+              <span class="chat-req-status">Checking...</span>
+            </div>
+          </div>
           <button class="btn btn-accent chat-download-btn" id="chatDownloadBtn" type="button" onclick="chatDownloadModel()">Download Model</button>
           <div class="chat-progress hidden" id="chatProgress">
             <div class="chat-progress-track"><div class="chat-progress-fill" id="chatProgressFill"></div></div>

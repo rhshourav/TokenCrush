@@ -1080,6 +1080,24 @@ textarea.out-code{
 .chat-model-size{font-size:10px;color:var(--muted)}
 .chat-download-btn{width:100%;padding:8px;font-size:12px;font-weight:700}
 
+.chat-requirements{
+  display:flex;flex-direction:column;gap:4px;
+  margin:8px 0;padding:8px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius);
+}
+.chat-req-item{
+  display:flex;align-items:center;gap:6px;
+  font-size:10px;
+}
+.chat-req-icon{font-size:12px;flex-shrink:0}
+.chat-req-label{color:var(--text2);font-weight:600;min-width:60px}
+.chat-req-status{color:var(--muted);font-family:var(--mono)}
+.chat-req-item.ok .chat-req-icon{content:'✓'}
+.chat-req-item.ok .chat-req-status{color:var(--green)}
+.chat-req-item.warn .chat-req-status{color:var(--amber)}
+.chat-req-item.fail .chat-req-status{color:var(--red)}
+
 .chat-progress{margin-top:8px}
 .chat-progress-track{height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-bottom:4px}
 .chat-progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s;width:0}

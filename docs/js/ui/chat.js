@@ -8,6 +8,52 @@ let conversation = [];
 
 function $(id) { return document.getElementById(id); }
 
+function checkRequirements() {
+  const issues = [];
+  const warnings = [];
+
+  // Check WebGPU support
+  if (!navigator.gpu) {
+    issues.push('WebGPU is not supported in your browser');
+  }
+
+  // Check available memory
+  const minMemoryMB = 800;
+  let availableMemoryMB = null;
+
+  if (navigator.deviceMemory) {
+    availableMemoryMB = navigator.deviceMemory * 1024;
+  } else if (performance && performance.memory) {
+    availableMemoryMB = performance.memory.jsHeapSizeLimit / (1024 * 1024);
+  }
+
+  if (availableMemoryMB !== null) {
+    const freeMemoryMB = availableMemoryMB * 0.25;
+    if (freeMemoryMB < minMemoryMB) {
+      warnings.push(`Low memory: ~${Math.round(freeMemoryMB)}MB available, ~${minMemoryMB}MB recommended`);
+    }
+  }
+
+  // Check browser
+  const ua = navigator.userAgent;
+  const isChrome = /Chrome\/(\d+)/.test(ua) && !/Edg\//.test(ua);
+  const isEdge = /Edg\//.test(ua);
+  const isFirefox = /Firefox\//.test(ua);
+
+  if (!isChrome && !isEdge && !isFirefox) {
+    warnings.push('Browser may not fully support WebGPU');
+  }
+
+  return { issues, warnings };
+}
+
+function showRequirementsWarning(warnings) {
+  if (warnings.length === 0) return true;
+
+  const msg = 'Warnings:\n• ' + warnings.join('\n• ') + '\n\nContinue anyway?';
+  return confirm(msg);
+}
+
 export function initChat() {
   const input = $('chatInput');
   if (input) {
@@ -15,6 +61,56 @@ export function initChat() {
       input.style.height = 'auto';
       input.style.height = Math.min(input.scrollHeight, 120) + 'px';
     });
+  }
+
+  updateRequirementsUI();
+}
+
+function updateRequirementsUI() {
+  const webgpuEl = $('reqWebGPU');
+  const memoryEl = $('reqMemory');
+  if (!webgpuEl || !memoryEl) return;
+
+  const { issues, warnings } = checkRequirements();
+
+  // WebGPU check
+  const webgpuOk = !issues.some(i => i.includes('WebGPU'));
+  const webgpuIcon = webgpuEl.querySelector('.chat-req-icon');
+  const webgpuStatus = webgpuEl.querySelector('.chat-req-status');
+
+  if (webgpuOk) {
+    webgpuEl.classList.add('ok');
+    webgpuIcon.textContent = '✓';
+    webgpuStatus.textContent = 'Supported';
+  } else {
+    webgpuEl.classList.add('fail');
+    webgpuIcon.textContent = '✕';
+    webgpuStatus.textContent = 'Not supported';
+  }
+
+  // Memory check
+  const memoryWarning = warnings.some(w => w.includes('memory'));
+  const memoryIcon = memoryEl.querySelector('.chat-req-icon');
+  const memoryStatus = memoryEl.querySelector('.chat-req-status');
+
+  if (memoryWarning) {
+    memoryEl.classList.add('warn');
+    memoryIcon.textContent = '⚠';
+    memoryStatus.textContent = 'Low memory';
+  } else {
+    memoryEl.classList.add('ok');
+    memoryIcon.textContent = '✓';
+    memoryStatus.textContent = 'Sufficient';
+  }
+
+  // Disable download if critical issues
+  if (issues.length > 0) {
+    const btn = $('chatDownloadBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Cannot load model';
+      btn.style.opacity = '.5';
+    }
   }
 }
 
@@ -59,6 +155,18 @@ function formatPrompt(userText) {
 
 export async function chatDownloadModel() {
   if (modelReady || isLoading) return;
+
+  const { issues, warnings } = checkRequirements();
+
+  if (issues.length > 0) {
+    appendMessage('system', 'Cannot load model:\n• ' + issues.join('\n• '));
+    return;
+  }
+
+  if (warnings.length > 0 && !showRequirementsWarning(warnings)) {
+    return;
+  }
+
   isLoading = true;
 
   const btn = $('chatDownloadBtn');
