@@ -65,9 +65,9 @@ function renderFolderNode(parent, folderId, depth, filter) {
 }
 
 function hasFolderContent(folderId, filter) {
-  const children = [...state.folders.values()].filter(f => f.parentId === folderId);
-  for (const child of children) {
-    if (hasFolderContent(state.folders.entries().next().value?.[0], filter)) return true;
+  const children = [...state.folders.entries()].filter(([, f]) => f.parentId === folderId);
+  for (const [childId] of children) {
+    if (hasFolderContent(childId, filter)) return true;
   }
   const files = [...state.files.values()].filter(f => f.folderId === folderId);
   for (const f of files) {
