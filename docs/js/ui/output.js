@@ -286,7 +286,7 @@ export function buildAllStats() {
 }
 
 function getLangLabel(ext) {
-  const map = { js: 'JavaScript', ts: 'TypeScript', py: 'Python', html: 'HTML', css: 'CSS', json: 'JSON', md: 'Markdown', c: 'C', cpp: 'C++', java: 'Java', go: 'Go', rs: 'Rust', rb: 'Ruby', php: 'PHP', sh: 'Shell', yml: 'YAML', yaml: 'YAML', xml: 'XML', txt: 'Text' };
+  const map = { js: 'JavaScript', ts: 'TypeScript', py: 'Python', html: 'HTML', css: 'CSS', json: 'JSON', md: 'Markdown', c: 'C', cpp: 'C++', java: 'Java', go: 'Go', rs: 'Rust', rb: 'Ruby', php: 'PHP', sh: 'Shell', bash: 'Shell', zsh: 'Shell', ps1: 'PowerShell', psm1: 'PowerShell', psd1: 'PowerShell', yml: 'YAML', yaml: 'YAML', xml: 'XML', txt: 'Text' };
   return map[ext] || ext.toUpperCase();
 }
 

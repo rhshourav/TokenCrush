@@ -920,6 +920,8 @@ body {
 .lang-css { background: rgba(16,185,129,0.1); color: var(--green); border: 1px solid rgba(16,185,129,0.2); }
 .lang-py { background: rgba(139,92,246,0.1); color: var(--accent); border: 1px solid rgba(139,92,246,0.2); }
 .lang-other { background: var(--surface-active); color: var(--text-muted); border: 1px solid var(--border); }
+.lang-shell { background: rgba(59,130,246,0.1); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2); }
+.lang-ps1 { background: rgba(99,102,241,0.1); color: #818cf8; border: 1px solid rgba(99,102,241,0.2); }
 
 .token-pill {
   font-size: 10px;
